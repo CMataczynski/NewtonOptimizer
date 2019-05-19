@@ -26,6 +26,7 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow,screen_resolution):
         self.browser_length = 0
         self.painting = False
+        self.optimizing = False
         self.log = []
         self.function_accepted = False
         self.optimization_done = False
@@ -225,8 +226,8 @@ class Ui_MainWindow(object):
 
         self.pushButton.clicked.connect(self.threaded_optimize)
         self.pushButton_2.clicked.connect(self.threaded_paint)
-        self.pushButton.setEnabled(False)
-        self.pushButton_2.setEnabled(False)
+        self.pushButton.setEnabled(True)
+        self.pushButton_2.setEnabled(True)
 
         #Wprowadzanie punktu początkowego
         self.lineEdit.setValidator(QtGui.QDoubleValidator())
@@ -289,7 +290,7 @@ class Ui_MainWindow(object):
         self.groupBox_9.setTitle(_translate("MainWindow", "Początkowy krok"))
         self.lineEdit_11.setText(_translate("MainWindow", "10"))
         self.groupBox_10.setTitle(_translate("MainWindow", "Współczynnik testu"))
-        self.lineEdit_12.setText(_translate("MainWindow", "0.4"))
+        self.lineEdit_12.setText(_translate("MainWindow", "0.6"))
         self.pushButton.setText(_translate("MainWindow", "Optymalizuj"))
         self.pushButton_2.setText(_translate("MainWindow", "Rysiuj"))
         self.groupBox_11.setTitle(_translate("MainWindow", "Wykres"))
@@ -298,7 +299,8 @@ class Ui_MainWindow(object):
 
     def daemon(self):
         while True:
-            if  not self.painting:
+            time.sleep(0.1)
+            if not self.painting and not self.optimizing:
                 if self.function_accepted is False:
                     self.pushButton.setEnabled(False)
                 elif self.lineEdit.isEnabled() and self.lineEdit.text() is "":
@@ -333,6 +335,7 @@ class Ui_MainWindow(object):
                         self.pushButton_2.setEnabled(False)
                 else:
                     self.pushButton_2.setEnabled(False)
+
 
 
     def combobox_input_daemon(self):
@@ -401,24 +404,38 @@ class Ui_MainWindow(object):
             self.function_accepted = False
 
     def threaded_optimize(self):
-        try:
-            self.pushButton.setEnabled(False)
-            _thread.start_new_thread(self.optimize, ())
-        except:
-            print("Nie udalo sie utworzyc watku dla optymalizacji")
+        if not self.optimizing:
+            try:
+                self.optimizing = True
+                self.textBrowser.clear()
+                self.ax.clear()
+                self.figure.clear()
+                self.pushButton.setEnabled(False)
+                _thread.start_new_thread(self.optimize, ())
+                while not self.optimization_done:
+                    time.sleep(0.2)
+                message = ""
+                for l in self.log:
+                    message += l
+                self.textBrowser.setPlainText(message)
+                self.textBrowser.moveCursor(QtGui.QTextCursor.End)
+            except:
+                print("Nie udalo sie utworzyc watku dla optymalizacji")
 
     def optimize(self):
+        self.log = []
+
         point = {}
         if self.lineEdit.isEnabled():
             point["x1"] = float(self.lineEdit.text())
         if self.lineEdit_2.isEnabled():
-            point["x2"] = float(self.lineEdit.text())
+            point["x2"] = float(self.lineEdit_2.text())
         if self.lineEdit_3.isEnabled():
-            point["x3"] = float(self.lineEdit.text())
+            point["x3"] = float(self.lineEdit_3.text())
         if self.lineEdit_4.isEnabled():
-            point["x4"] = float(self.lineEdit.text())
+            point["x4"] = float(self.lineEdit_4.text())
         if self.lineEdit_5.isEnabled():
-            point["x5"] = float(self.lineEdit.text())
+            point["x5"] = float(self.lineEdit_5.text())
 
         self.starting_point = point
         self.epsilon_1 = float(self.lineEdit_7.text())
@@ -430,24 +447,25 @@ class Ui_MainWindow(object):
         self.Optimizer = algorithm.NewtonOptimizer(self.function, self.starting_point, self.epsilon_1,
                                                    self.epsilon_2, self.epsilon_3, self.number_of_iterations,
                                                    self.step, self.test)
+        print("optimization start")
         self.log.append(str(self.Optimizer))
         while self.Optimizer.optimize_step():
-            self.log.append('krok: ' + str(len(self.Optimizer)))
+            print(len(self.Optimizer))
+            self.log.append('krok: ' + str(len(self.Optimizer))+'\n')
             self.log.append(str(self.Optimizer))
-        self.log.append('krok: ' + str(len(self.Optimizer)))
+
+        self.log.append('krok: ' + str(len(self.Optimizer))+'\n')
         self.log.append(str(self.Optimizer))
         self.log.append(str(self.Optimizer.why()))
-
-        string = ""
-        for i in range(len(self.log)):
-            string = string+self.log[i]+"\n"
-
-        self.textBrowser.setPlainText(string)
-        self.optimization_done = True
         self.pushButton.setEnabled(True)
+        self.optimization_done = True
+        self.optimizing = False
+        print("optimization done")
+
 
     def threaded_paint(self):
         try:
+            self.painting = True
             self.pushButton.setEnabled(False)
             self.pushButton_2.setEnabled(False)
             _thread.start_new_thread(self.paint, ())
@@ -455,7 +473,7 @@ class Ui_MainWindow(object):
             print("Nie udalo sie utworzyc watku dla rysowania")
 
     def paint(self):
-        self.painting = True
+        self.figure.clear()
         img = self.Optimizer.show_image()
         self.ax = self.figure.add_subplot(111)
         self.ax.clear()
@@ -466,9 +484,10 @@ class Ui_MainWindow(object):
         self.ax.plot(img["plot2"][0],img["plot2"][1],marker = 's',color = 'blue')
         self.figure.colorbar(mappable,ax=self.ax)
         self.canvas.draw()
-        self.painting = False
         self.pushButton.setEnabled(True)
         self.pushButton_2.setEnabled(True)
+        self.painting = False
+        _thread.exit()
 
 
 

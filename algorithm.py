@@ -28,6 +28,14 @@ class HistoryOfOptimization:
 
 class NewtonOptimizer:
     def __init__(self, fcn, x0, epsilon, epsilon1, epsilon2, n, initial_step, beta):
+        #print(fcn)
+        #print(x0)
+        #print(epsilon)
+        #print(epsilon1)
+        #print(epsilon2)
+        #print(n)
+        #print(initial_step)
+        #print(beta)
         self.iterator = 0
         self.goldstein_iterator = 0
         self.ending_criterion = None
@@ -79,16 +87,19 @@ class NewtonOptimizer:
         message += 'kryterium 2: ' + str(self.criterion2) +'\n'
         message += 'kryterium 3: ' + str(self.criterion3) +'\n'
         if self.error_flag:
-            print("Error" + str(self.error_no) + ": " + self.error_message)
+            message+= "Error" + str(self.error_no) + ": " + self.error_message+'\n'
         return message
 
     def result(self):
         return self.x
 
     def why(self):
-        if self.min_lok:
-            return "Punkt siodlowy, zakonczono przez " + self.ending_criterion
-        return self.ending_criterion
+        if self.error_flag:
+            return ""
+        else:
+            if self.min_lok:
+                return "Punkt siodlowy, zakonczono przez " + self.ending_criterion
+            return self.ending_criterion
 
     def __len__(self):
         return self.iterator
@@ -162,13 +173,15 @@ class NewtonOptimizer:
         p = np.dot(grad,d)
         f0 = self.function.evaluate_expression(self.point_list_to_dict(x0))
         tr = self.initial_step_direction
-        while f0 <= self.function.evaluate_expression(self.point_list_to_dict(x0 + tr*d)):
+        while f0 < self.function.evaluate_expression(self.point_list_to_dict(x0 + tr*d)):
             tr = tr/2
+            #print(tr)
+        #print("Wchodze w nadswietlna")
         return self.goldstein_algo(x0,d,0,tr,beta,p,f0)
 
     def goldstein_algo(self,x0, d, tl, tr, beta, p, f0):
         t = (tl+tr)/2
-        if self.goldstein_iterator >= 1000:
+        if self.goldstein_iterator >= 500:
             return t
         new_point = self.point_list_to_dict(x0+t*d)
         f_new = self.function.evaluate_expression(new_point)
@@ -218,6 +231,7 @@ class NewtonOptimizer:
 
         #Sprawdzanie wyznacznika hesjanu
         wyznacznik = np.linalg.det(self.h)
+        #print("wyznacznik")
         if wyznacznik == 0:
             self.error_flag = True
             self.error_message = "Wyznacznik hesjanu równy {}. Podaj nowy punkt początkowy".format(wyznacznik)
@@ -231,9 +245,11 @@ class NewtonOptimizer:
 
         #Wyznaczanie kierunku poszukiwań
         dk = -1 * np.dot(np.linalg.inv(self.h), self.g)
+        #print("odwrotnosc")
         x_act = self.point_dict_to_list(self.x)
         #Wyznaczanie alfy minimalizacją w kierunku
         alfa = self.minimize_in_direction(x_act, dk)
+        #print("min_w_kier")
         #Utworzenie nowej wartosci x
         x_new = x_act+alfa*dk
         x_new = self.point_list_to_dict(x_new)
@@ -272,12 +288,12 @@ if __name__ == "__main__":
     # point = {"x1": 1, "x2": 5}
 
     # 4 minima lokalne
-    # fcn = FunctionParse("x1**4 + x2 **4 - 0.62*x1**2 - 0.62*x2**2")
-    # point = {"x1": 4, "x2": 0.2}
+    fcn = FunctionParse("x1**4 + x2 **4 - 0.62*x1**2 - 0.62*x2**2")
+    point = {"x1": 1, "x2": 0.2}
 
     # Rosenbrock
-    fcn = FunctionParse("100*(x2-x1**2)**2+(1-x1)**2")
-    point = {"x1": -1.2, "x2": 1.0}
+    #fcn = FunctionParse("100*(x2-x1**2)**2+(1-x1)**2")
+    #point = {"x1": -1.2, "x2": 1.0}
 
     # Zangwill
     # fcn = FunctionParse("(x1 - x2 + x3)**2 + (-x1 + x2 + x3)**2 + (x1 + x2 - x3)**2")
