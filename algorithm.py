@@ -27,26 +27,19 @@ class HistoryOfOptimization:
 
 
 class NewtonOptimizer:
-    def __init__(self, fcn, x0, e, epsilon, epsilon1, epsilon2, n, H0=None):
+    def __init__(self, fcn, x0, epsilon, epsilon1, epsilon2, n, initial_step, beta):
         self.iterator = 0
         self.goldstein_iterator = 0
         self.ending_criterion = None
         # punkt startowy
         self.x0 = x0
         #Macierz kierunków poszukiwań
-        if H0 is not None:
-            self.H0 = H0
-        else:
-            self.H0 = np.identity(n)
-        # poczatkowa dlugosc kroku
-        self.e = e
-        # dokladnosc obliczen w kierunku
         self.epsilon = epsilon
-        # dokladnosc obliczen globalna
         self.epsilon1 = epsilon1
         self.epsilon2 = epsilon2
-        # zmienne niezalezne
         self.maxsteps = n
+        self.initial_step_direction = initial_step
+        self.beta = beta
         # funkcja do optymalizacji
         self.function = fcn
         self.f0 = fcn.evaluate_expression(x0)
@@ -100,10 +93,10 @@ class NewtonOptimizer:
     def __len__(self):
         return self.iterator
 
-    def show_image(self):
+    def show_image(self,resolution = 256):
         result = self.result()
         start = self.history[0]["x"]
-        resolution = 256
+        resolution = resolution
         multiplicator = 0.15
         x1_list = []
         x2_list = []
@@ -138,12 +131,11 @@ class NewtonOptimizer:
         for i, item in enumerate(self.history):
             x.append(item["x"]["x1"])
             y.append(item["x"]["x2"])
-        print([xl, xr, yl, yr])
-        plt.imshow(outer, cmap="hot", extent=[xl, xr, yl, yr], aspect=abs(xr - xl) / abs(yr - yl))
-        plt.plot(x,y,linestyle='-',marker = 's', color = 'grey')
-        plt.plot([result["x1"]],[result["x2"]],marker = 's',color = 'blue')
-        plt.colorbar()
-        plt.show()
+        return {
+            "imshow": [outer, [xl, xr, yl, yr], abs(xr - xl) / abs(yr - yl)],
+            "plot1": [x, y],
+            "plot2": [[result["x1"]],[result["x2"]]]
+        }
 
     def point_dict_to_list(self,point):
         return [point[key] for key in point]
@@ -161,14 +153,15 @@ class NewtonOptimizer:
         return sum
 
 
-    def minimize_in_direction(self, x0, d, beta = 2/5):
+    def minimize_in_direction(self, x0, d):
+        beta = self.beta
         d = np.array(d)
         x0 = np.array(x0)
         self.goldstein_iterator = 0
         grad = np.array(self.function.evaluate_gradient(self.point_list_to_dict(x0)))
         p = np.dot(grad,d)
         f0 = self.function.evaluate_expression(self.point_list_to_dict(x0))
-        tr = 10
+        tr = self.initial_step_direction
         while f0 <= self.function.evaluate_expression(self.point_list_to_dict(x0 + tr*d)):
             tr = tr/2
         return self.goldstein_algo(x0,d,0,tr,beta,p,f0)
@@ -240,7 +233,7 @@ class NewtonOptimizer:
         dk = -1 * np.dot(np.linalg.inv(self.h), self.g)
         x_act = self.point_dict_to_list(self.x)
         #Wyznaczanie alfy minimalizacją w kierunku
-        alfa = self.minimize_in_direction(x_act, dk, 2/5)
+        alfa = self.minimize_in_direction(x_act, dk)
         #Utworzenie nowej wartosci x
         x_new = x_act+alfa*dk
         x_new = self.point_list_to_dict(x_new)
@@ -270,42 +263,42 @@ class NewtonOptimizer:
         return self.check_integrity_criterions()
 
 
-#fcn = FunctionParse("x1^3 + (x2-2)^2 + (x3 - 8)^2 + x4^2 + 2")
-#point = {"x1": 1, "x2": 5, "x3": 7, "x4": 1}
+if __name__ == "__main__":
 
-#fcn = FunctionParse("(x1-2)**2 + (x1-x2**2)**2")
-#point = {"x1": 1, "x2": 5}
+    # fcn = FunctionParse("x1^3 + (x2-2)^2 + (x3 - 8)^2 + x4^2 + 2")
+    # point = {"x1": 1, "x2": 5, "x3": 7, "x4": 1}
 
-#4 minima lokalne
-#fcn = FunctionParse("x1**4 + x2 **4 - 0.62*x1**2 - 0.62*x2**2")
-#point = {"x1": 4, "x2": 0.2}
+    # fcn = FunctionParse("(x1-2)**2 + (x1-x2**2)**2")
+    # point = {"x1": 1, "x2": 5}
 
-#Rosenbrock
-fcn = FunctionParse("100*(x2-x1**2)**2+(1-x1)**2")
-point = {"x1": -1.2, "x2": 1.0}
+    # 4 minima lokalne
+    # fcn = FunctionParse("x1**4 + x2 **4 - 0.62*x1**2 - 0.62*x2**2")
+    # point = {"x1": 4, "x2": 0.2}
 
-#Zangwill
-#fcn = FunctionParse("(x1 - x2 + x3)**2 + (-x1 + x2 + x3)**2 + (x1 + x2 - x3)**2")
-#point = {"x1": 100, "x2": -1, "x3": 2.5}
+    # Rosenbrock
+    fcn = FunctionParse("100*(x2-x1**2)**2+(1-x1)**2")
+    point = {"x1": -1.2, "x2": 1.0}
 
-#Goldstein-Price
-#fcn = FunctionParse("(1 + ((x1 + x2 + 1)**2)*(19-14*x1+3*x1**2-14*x2+6*x1*x2 + 3*x2**2))*((30+(2*x1-3*x2)**2)*(18-32*x1+12*x1**2+48*x2-36*x1*x2+27*x2**2))")
-#point = {"x1": -0.4, "x2": -0.6}
+    # Zangwill
+    # fcn = FunctionParse("(x1 - x2 + x3)**2 + (-x1 + x2 + x3)**2 + (x1 + x2 - x3)**2")
+    # point = {"x1": 100, "x2": -1, "x3": 2.5}
 
+    # Goldstein-Price
+    # fcn = FunctionParse("(1 + ((x1 + x2 + 1)**2)*(19-14*x1+3*x1**2-14*x2+6*x1*x2 + 3*x2**2))*((30+(2*x1-3*x2)**2)*(18-32*x1+12*x1**2+48*x2-36*x1*x2+27*x2**2))")
+    # point = {"x1": -0.4, "x2": -0.6}
 
-#print(fcn.evaluate_expression(point))
-#print(fcn.evaluate_gradient(point))
-#print(fcn.evaluate_hessian(point))
-
-optimizer = NewtonOptimizer(fcn, point, 0, 1e-8, 1e-8, 1e-8, 1000)
-print(optimizer)
-while(optimizer.optimize_step()):
+    # print(fcn.evaluate_expression(point))
+    # print(fcn.evaluate_gradient(point))
+    # print(fcn.evaluate_hessian(point))
+    optimizer = NewtonOptimizer(fcn, point, 1e-8, 1e-8, 1e-8, 1000, 10, 3/5)
+    print(optimizer)
+    while(optimizer.optimize_step()):
+        print('krok: ' + str(len(optimizer)))
+        print(optimizer)
     print('krok: ' + str(len(optimizer)))
     print(optimizer)
-print('krok: ' + str(len(optimizer)))
-print(optimizer)
-print(optimizer.why())
-optimizer.show_image()
+    print(optimizer.why())
+    optimizer.show_image()
 
 
 #Wyznacznik hesjanu > 0

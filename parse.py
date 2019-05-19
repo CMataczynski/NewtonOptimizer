@@ -17,6 +17,9 @@ class FunctionParse:
         input_string = input_string.replace("^","**")
         self.code = parser.expr(input_string).compile()
 
+    def nov(self):
+        return self.number_of_variables
+
     def get_value_matrix(self,variables, dx):
         value_matrix = np.zeros((self.number_of_variables, 3))
         iterator = 0
