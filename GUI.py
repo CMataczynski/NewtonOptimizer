@@ -411,6 +411,7 @@ class Ui_MainWindow(object):
                 self.ax.clear()
                 self.figure.clear()
                 self.pushButton.setEnabled(False)
+                self.optimization_done = False
                 _thread.start_new_thread(self.optimize, ())
                 while not self.optimization_done:
                     time.sleep(0.2)
@@ -424,7 +425,6 @@ class Ui_MainWindow(object):
 
     def optimize(self):
         self.log = []
-
         point = {}
         if self.lineEdit.isEnabled():
             point["x1"] = float(self.lineEdit.text())
