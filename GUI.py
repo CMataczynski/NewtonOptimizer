@@ -43,6 +43,7 @@ class Ui_MainWindow(object):
             "Funkcja Goldstein'a-Price'a"
         ]
         self.help_list = [
+            "Zmienne: x1, x2, x3, x4, x5",
             "Operatory: +, -, *, ^, /, (, )",
             "Stałe: e, pi, tau",
             "Funkcje Trygonometryczne: sin(), cos(), tan()",
